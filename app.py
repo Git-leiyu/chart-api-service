@@ -4,47 +4,38 @@ import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')  # 不需要GUI界面
-import re
-import os  # 添加这行
+matplotlib.use('Agg')
+import os
 
 app = Flask(__name__)
 
-# 剩下的代码保持不变...
-
 def create_er_diagram(entities_description):
-    """根据实体描述创建简单的ER图"""
     fig, ax = plt.subplots(figsize=(12, 8))
     
-    # 解析实体和关系（简化版本）
     entities = []
     relationships = []
     
-    # 简单的文本解析（实际可以更复杂）
     lines = entities_description.split('\n')
     for line in lines:
         line = line.strip()
-        if '实体' in line or '表' in line:
+        if 'entity' in line.lower() or 'table' in line.lower():
             entities.append(line)
-        elif '关系' in line or '关联' in line or '->' in line:
+        elif 'relation' in line.lower() or 'relationship' in line.lower() or '->' in line:
             relationships.append(line)
     
-    # 创建图表
     ax.clear()
-    ax.set_title('实体关系图 (ER Diagram)', fontsize=16, pad=20)
+    ax.set_title('Entity Relationship Diagram', fontsize=16, pad=20)
     
-    # 显示实体
-    entity_text = "实体列表:\n" + "\n".join([f"• {e}" for e in entities]) if entities else "暂无实体信息"
+    # 使用英文标签
+    entity_text = "Entities:\n" + "\n".join([f"• {e}" for e in entities]) if entities else "No entities defined"
     ax.text(0.1, 0.7, entity_text, fontsize=12, verticalalignment='top', 
             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue"))
     
-    # 显示关系
-    relation_text = "关系列表:\n" + "\n".join([f"• {r}" for r in relationships]) if relationships else "暂无关系信息"
+    relation_text = "Relationships:\n" + "\n".join([f"• {r}" for r in relationships]) if relationships else "No relationships defined"
     ax.text(0.1, 0.3, relation_text, fontsize=12, verticalalignment='top',
             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen"))
     
-    # 显示原始描述
-    ax.text(0.5, 0.9, "分析内容:", fontsize=12, weight='bold', ha='center')
+    ax.text(0.5, 0.9, "Analysis Content:", fontsize=12, weight='bold', ha='center')
     ax.text(0.5, 0.85, entities_description[:100] + "..." if len(entities_description) > 100 else entities_description, 
             fontsize=10, ha='center', style='italic')
     
@@ -53,67 +44,4 @@ def create_er_diagram(entities_description):
     
     return fig
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """健康检查端点"""
-    return jsonify({'status': 'healthy', 'message': 'Chart API is running'})
-
-@app.route('/generate_diagram', methods=['POST'])
-def generate_diagram():
-    """生成图表的主端点"""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'No JSON data provided'})
-        
-        diagram_type = data.get('type', 'er')
-        content = data.get('content', '')
-        
-        if not content:
-            return jsonify({'success': False, 'error': 'No content provided'})
-        
-        if diagram_type == 'er':
-            fig = create_er_diagram(content)
-        else:
-            return jsonify({'success': False, 'error': f'Unsupported diagram type: {diagram_type}'})
-        
-        # 将图表转换为base64
-        buffer = BytesIO()
-        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
-        buffer.seek(0)
-        image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        plt.close(fig)
-        
-        return jsonify({
-            'success': True,
-            'image_data': f"data:image/png;base64,{image_data}",
-            'message': f'{diagram_type.upper()} diagram generated successfully',
-            'type': diagram_type
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/generate_diagram_direct', methods=['GET'])
-def generate_diagram_direct():
-    """直接通过URL参数生成图表的端点（用于测试）"""
-    content = request.args.get('content', '测试实体：用户，图书，借阅记录')
-    diagram_type = request.args.get('type', 'er')
-    
-    try:
-        if diagram_type == 'er':
-            fig = create_er_diagram(content)
-        
-        buffer = BytesIO()
-        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
-        buffer.seek(0)
-        
-        return send_file(buffer, mimetype='image/png', as_attachment=False, 
-                       download_name=f'{diagram_type}_diagram.png')
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+# 其余代码保持不变...
